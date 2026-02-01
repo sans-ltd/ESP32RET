@@ -1,0 +1,13 @@
+[submodule "lib/can_common"]
+	path = lib/can_common
+	url = https://github.com/collin80/can_common.git
+[submodule "lib/esp32_can"]
+	path = lib/esp32_can
+	url = https://github.com/collin80/esp32_can.git
+[submodule "lib/esp32_mcp2517fd"]
+	path = lib/esp32_mcp2517fd
+	url = https://github.com/collin80/esp32_mcp2517fd.git
+[submodule "lib/tester-opensource"]
+	path = lib/tester-opensource
+	url = ../tester-opensource
+
