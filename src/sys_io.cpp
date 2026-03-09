@@ -31,9 +31,15 @@ by stimmer
 */
 
 #include "sys_io.h"
+#include <VirtualLED.h>
 #include <FastLED.h>
 
-extern CRGB leds[A5_NUM_LEDS];
+#ifdef VIRTUALLED_EMULATE_FASTLED
+extern VirtualLEDs virtualLEDs;
+static auto& leds = virtualLEDs;
+#else
+extern CRGB leds[A5_NUM_LEDS]; 
+#endif
 
 bool useRawADC = false;
 

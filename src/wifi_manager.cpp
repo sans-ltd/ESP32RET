@@ -5,10 +5,16 @@
 #include <ESPmDNS.h>
 #include <Update.h> 
 #include <WiFi.h>
+#include <VirtualLED.h>
 #include <FastLED.h>
 #include "ELM327_Emulator.h"
 
-extern CRGB leds[A5_NUM_LEDS];
+#ifdef VIRTUALLED_EMULATE_FASTLED
+extern VirtualLEDs virtualLEDs;
+static auto& leds = virtualLEDs;
+#else
+extern CRGB leds[A5_NUM_LEDS]; 
+#endif
 
 static IPAddress broadcastAddr(255,255,255,255);
 
