@@ -31,7 +31,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <SPI.h>
 #include <esp32_mcp2517fd.h>
 #include <Preferences.h>
+#include <VirtualLED.h>
+#include <IconStock.h>
 #include <FastLED.h>
+#include <IODefinitions.h>
+#include <Adafruit_SSD1306.h>
 #include "ELM327_Emulator.h"
 #include "SerialConsole.h"
 #include "wifi_manager.h"
@@ -71,6 +75,7 @@ LAWICELHandler lawicel;
 
 SerialConsole console;
 
+VirtualLEDs virtualLEDs;
 CRGB leds[A5_NUM_LEDS]; //A5 has the largest # of LEDs so use that one even for A0 or EVTV
 
 CAN_COMMON *canBuses[NUM_BUSES];
@@ -97,6 +102,9 @@ void loadSettings()
     uint8_t defaultVal = (espChipRevision > 2) ? 0 : 1; //0 = A0, 1 = EVTV ESP32
 #ifdef CONFIG_IDF_TARGET_ESP32S3
     defaultVal = 3;
+#endif
+#ifdef SANS_TESTER
+    defaultVal = 4; //Sans Tester
 #endif
     settings.systemType = nvPrefs.getUChar("systype", defaultVal);
 
@@ -170,8 +178,10 @@ void loadSettings()
 
         //reconfigure the two already defined CAN buses to use the actual pins for this board.
         CAN0.setCANPins(GPIO_NUM_4, GPIO_NUM_5); //rx, tx - This is the SWCAN interface
+#ifdef CONFIG_IDF_TARGET_ESP32S3
         CAN1.setINTPin(36);
         CAN1.setCSPin(32);
+#endif
         SysSettings.LED_CANTX = 0;
         SysSettings.LED_CANRX = 1;
         SysSettings.LED_LOGGING = 2;
@@ -239,6 +249,93 @@ void loadSettings()
         strcpy(otaFilename, "/esp32s3ret.bin");
     }
 
+    if (settings.systemType == 4)
+    {
+        Logger::console("Running on SANS Tester");
+        canBuses[0] = &CAN0;
+        canBuses[1] = &CAN1;
+        SysSettings.LED_CONNECTION_STATUS = 0;
+        SysSettings.LED_CANRX = 1;
+        SysSettings.LED_CANTX = 2;
+        SysSettings.LED_CANRX1 = 3;
+        SysSettings.LED_CANTX1 = 4;
+        SysSettings.LED_LOGGING = 0xff;
+        SysSettings.fancyLED = true;
+        SysSettings.logToggle = false;
+        SysSettings.txToggle = false;
+        SysSettings.rxToggle = false;
+        SysSettings.lawicelAutoPoll = false;
+        SysSettings.lawicelMode = false;
+        SysSettings.lawicellExtendedMode = false;
+        SysSettings.lawicelTimestamping = false;
+        SysSettings.numBuses = 2; // We support both TWAI busses of ESP32-C6
+        SysSettings.isWifiActive = false;
+        SysSettings.isWifiConnected = false;
+        strcpy(deviceName, "SANS-Tester");
+        strcpy(otaHost, "support.sans-ltd.com");
+        strcpy(otaFilename, "/a0/files/a0ret.bin");
+        
+        // Wake Transceivers
+        pinMode(IODefinitions::CAN_SLEEP, OUTPUT_OPEN_DRAIN);
+        digitalWrite(IODefinitions::CAN_SLEEP, HIGH);
+        CAN0.setCANPins(IODefinitions::CAN0_RX, IODefinitions::CAN0_TX);
+        CAN1.setCANPins(IODefinitions::CAN1_RX, IODefinitions::CAN1_TX);
+
+        Wire.begin(14, 8);
+        Adafruit_SSD1306* display = new Adafruit_SSD1306(128, 32, &Wire, -1);
+        virtualLEDs.begin(display);
+        virtualLEDs.addLED(/* autoUpdate */ true);
+        virtualLEDs.addLED(/* autoUpdate */ true);
+        virtualLEDs.addLED(/* autoUpdate */ true);
+        virtualLEDs.addLED(/* autoUpdate */ true);
+        virtualLEDs.addLED(/* autoUpdate */ true);
+
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].stateBitmaps[CRGB::Red] = IconStock::networkDisconnected;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].stateBitmaps[CRGB::Green] = IconStock::networkConnected;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].stateBitmaps[CRGB::Blue] = IconStock::deviceConnected;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].stateBitmaps[CRGB::Purple] = IconStock::otaUpdate;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].x = 0;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].y = 8;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].width = 24;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].height = 24;
+        virtualLEDs[SysSettings.LED_CONNECTION_STATUS].state = CRGB::Red;
+
+        virtualLEDs[SysSettings.LED_CANRX].stateBitmaps[CRGB::Blue] = IconStock::canBusReceive;
+        virtualLEDs[SysSettings.LED_CANRX].stateBitmaps[CRGB::Black] = nullptr; //just blank with no activity
+        virtualLEDs[SysSettings.LED_CANRX].x = 48+4;
+        virtualLEDs[SysSettings.LED_CANRX].y = 8;
+        virtualLEDs[SysSettings.LED_CANRX].width = 24;
+        virtualLEDs[SysSettings.LED_CANRX].height = 24;
+        virtualLEDs[SysSettings.LED_CANRX].state = CRGB::Black;
+
+        virtualLEDs[SysSettings.LED_CANTX].stateBitmaps[CRGB::Green] = IconStock::canBusSend;
+        virtualLEDs[SysSettings.LED_CANTX].stateBitmaps[CRGB::Black] = nullptr; //just blank with no activity
+        virtualLEDs[SysSettings.LED_CANTX].x = 48+4;
+        virtualLEDs[SysSettings.LED_CANTX].y = 8;
+        virtualLEDs[SysSettings.LED_CANTX].width = 24;
+        virtualLEDs[SysSettings.LED_CANTX].height = 24;
+        virtualLEDs[SysSettings.LED_CANTX].state = CRGB::Black;
+
+        virtualLEDs[SysSettings.LED_CANRX1].stateBitmaps[CRGB::Blue] = IconStock::canBusReceive;
+        virtualLEDs[SysSettings.LED_CANRX1].stateBitmaps[CRGB::Black] = nullptr; //just blank with no activity
+        virtualLEDs[SysSettings.LED_CANRX1].x = 96+8;
+        virtualLEDs[SysSettings.LED_CANRX1].y = 8;
+        virtualLEDs[SysSettings.LED_CANRX1].width = 24;
+        virtualLEDs[SysSettings.LED_CANRX1].height = 24;
+        virtualLEDs[SysSettings.LED_CANRX1].state = CRGB::Black;
+
+        virtualLEDs[SysSettings.LED_CANTX1].stateBitmaps[CRGB::Green] = IconStock::canBusSend;
+        virtualLEDs[SysSettings.LED_CANTX1].stateBitmaps[CRGB::Black] = nullptr; //just blank with no activity
+        virtualLEDs[SysSettings.LED_CANTX1].x = 96+8;
+        virtualLEDs[SysSettings.LED_CANTX1].y = 8;
+        virtualLEDs[SysSettings.LED_CANTX1].width = 24;
+        virtualLEDs[SysSettings.LED_CANTX1].height = 24;
+        virtualLEDs[SysSettings.LED_CANTX1].state = CRGB::Black;
+
+        display->setTextSize(1); 
+        display->setTextColor(SSD1306_WHITE);
+    }
+
     if (nvPrefs.getString("SSID", settings.SSID, 32) == 0)
     {
         strcpy(settings.SSID, deviceName);
@@ -270,6 +367,9 @@ void loadSettings()
         settings.canSettings[i].fdMode = nvPrefs.getBool(buff, false);
     }
 
+    Serial.printf("CAN0 fdmode: %d, listenOnly: %d, CAN1 fdmode: %d, listenOnly: %d\n", 
+                  settings.canSettings[0].fdMode, settings.canSettings[0].listenOnly,
+                  settings.canSettings[1].fdMode, settings.canSettings[1].listenOnly);
     nvPrefs.end();
 
     Logger::setLoglevel((Logger::LogLevel)settings.logLevel);
@@ -299,8 +399,8 @@ void setup()
 
     loadSettings();
 
-    //CAN0.setDebuggingMode(true);
-    //CAN1.setDebuggingMode(true);
+    CAN0.setDebuggingMode(true);
+    CAN1.setDebuggingMode(true);
 
     canManager.setup();
 
@@ -314,6 +414,15 @@ void setup()
             FastLED.show();
         }
     }
+
+    CAN_FRAME testFrame;
+    testFrame.id = 0x123;
+    testFrame.extended = false;
+    testFrame.rtr = false;
+    testFrame.length = 8;
+    for (int i = 0; i < 8; i++) testFrame.data.bytes[i] = i;
+    CAN0.sendFrame(testFrame);
+    CAN1.sendFrame(testFrame);
     
     /*else*/ wifiManager.setup();
 
