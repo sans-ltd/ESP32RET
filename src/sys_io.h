@@ -49,7 +49,9 @@ boolean getDigital(uint8_t which);  ////get value of one of the 6 digital/sudo(A
 void setOutput(uint8_t which, boolean active); //set output high or not
 boolean getOutput(uint8_t which); //get current value of output state (high?)
 void setLED(uint8_t, boolean);
-void toggleTXLED();
-void toggleRXLED();
+void toggleTXLED(uint8_t whichBus = 0, bool forceClear = false);
+void toggleRXLED(uint8_t whichBus = 0, bool forceClear = false);
+void sys_io_begin();
+void sys_io_doLoop();
 #endif
 

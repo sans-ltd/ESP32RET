@@ -7,7 +7,6 @@
 #include "lawicel.h"
 #include "ELM327_Emulator.h"
 
-
 //twai alerts copied here for ease of access. Look up alerts right here:
 //#define TWAI_ALERT_TX_IDLE                  0x00000001  /**< Alert(1): No more messages to transmit */
 //#define TWAI_ALERT_TX_SUCCESS               0x00000002  /**< Alert(2): The previous transmission was successful */
@@ -110,6 +109,8 @@ void CANManager::setup()
     }
 
     busLoadTimer = millis();
+
+    sys_io_begin();
 }
 
 void CANManager::addBits(int offset, CAN_FRAME &frame)
@@ -134,6 +135,7 @@ void CANManager::sendFrame(CAN_COMMON *bus, CAN_FRAME &frame)
     for (int i = 0; i < NUM_BUSES; i++) if (canBuses[i] == bus) whichBus = i;
     bus->sendFrame(frame);
     addBits(whichBus, frame);
+    toggleTXLED(whichBus);
 }
 
 void CANManager::sendFrame(CAN_COMMON *bus, CAN_FRAME_FD &frame)
@@ -142,6 +144,7 @@ void CANManager::sendFrame(CAN_COMMON *bus, CAN_FRAME_FD &frame)
     for (int i = 0; i < NUM_BUSES; i++) if (canBuses[i] == bus) whichBus = i;
     bus->sendFrameFD(frame);
     addBits(whichBus, frame);
+    toggleTXLED(whichBus);
 }
 
 
@@ -213,7 +216,7 @@ void CANManager::loop()
                 displayFrame(inFD, i);
             }
             
-            toggleRXLED();
+            toggleRXLED(i);
             if ( ((incoming.id > 0x7DF) && (incoming.id < 0x7F0)) || elmEmulator.getMonitorMode())
             {
                 //canManager.displayFrame(incoming, i);
@@ -225,4 +228,6 @@ void CANManager::loop()
             maxLength = (wifiLength > serialLength) ? wifiLength:serialLength;
         }
     }
+
+    sys_io_doLoop();
 }

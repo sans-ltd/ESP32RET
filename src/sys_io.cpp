@@ -31,15 +31,8 @@ by stimmer
 */
 
 #include "sys_io.h"
-#include <VirtualLED.h>
 #include <FastLED.h>
-
-#ifdef VIRTUALLED_EMULATE_FASTLED
-extern VirtualLEDs virtualLEDs;
-static auto& leds = virtualLEDs;
-#else
-extern CRGB leds[A5_NUM_LEDS]; 
-#endif
+#include "ActivityLED.h"
 
 bool useRawADC = false;
 
@@ -54,6 +47,13 @@ uint8_t out[NUM_OUTPUT];    //digital output configuration details
 uint32_t Enabled_Analogue_Pins = 0; // Sum of ADC input numbers to load into ADC_CHER
 
 ADC_COMP adc_comp[NUM_ANALOG]; //holds ADC offset or gain
+
+namespace {
+    ActivityLED* rxLED0 = nullptr;
+    ActivityLED* txLED0 = nullptr;
+    ActivityLED* rxLED1 = nullptr;
+    ActivityLED* txLED1 = nullptr;
+}
 
 //forces the digital I/O ports to a safe state. This is called very early in initialization.
 void sys_early_setup(){
@@ -138,32 +138,46 @@ void setLED(uint8_t which, boolean hi){
     }
 }
 
-void toggleRXLED()
+void sys_io_begin()
 {
-    static int counter = 0;
-    counter++;
-    if (counter >= BLINK_SLOWNESS) {
-        counter = 0;
-        SysSettings.rxToggle = !SysSettings.rxToggle;
-        if (!SysSettings.fancyLED) setLED(SysSettings.LED_CANRX, SysSettings.rxToggle);
-        else
-        {
-          leds[SysSettings.LED_CANRX] = SysSettings.rxToggle?CRGB::Blue:CRGB::Black;
-        };
+    if (SysSettings.LED_CANRX != 255) rxLED0 = new ActivityLED(SysSettings.LED_CANRX,  SysSettings.fancyLED, CRGB::Blue,  CRGB::Black);
+    if (SysSettings.LED_CANTX != 255) txLED0 = new ActivityLED(SysSettings.LED_CANTX,  SysSettings.fancyLED, CRGB::Green, CRGB::Black);
+    if (SysSettings.LED_CANRX1 != 255) rxLED1 = new ActivityLED(SysSettings.LED_CANRX1, SysSettings.fancyLED, CRGB::Blue,  CRGB::Black);
+    if (SysSettings.LED_CANTX1 != 255) txLED1 = new ActivityLED(SysSettings.LED_CANTX1, SysSettings.fancyLED, CRGB::Green, CRGB::Black);
+}
+
+void toggleRXLED(uint8_t whichBus, bool forceClear)
+{
+    if (rxLED0 != nullptr && (whichBus != 1 || rxLED1 == nullptr))
+    {
+        if (forceClear) rxLED0->clear();
+        else rxLED0->toggle();
+    }
+    else if (whichBus == 1 && rxLED1 != nullptr)
+    {
+        if (forceClear) rxLED1->clear();
+        else rxLED1->toggle();
     }
 }
 
-void toggleTXLED()
+void toggleTXLED(uint8_t whichBus, bool forceClear)
 {
-    static int counter = 0;
-    counter++;
-    if (counter >= BLINK_SLOWNESS) {
-        counter = 0;
-        SysSettings.txToggle = !SysSettings.txToggle;
-        if (!SysSettings.fancyLED) setLED(SysSettings.LED_CANTX, SysSettings.txToggle);
-        else
-        {
-          leds[SysSettings.LED_CANRX] = SysSettings.rxToggle?CRGB::Green:CRGB::Black;
-        };
+    if (txLED0 != nullptr && (whichBus != 1 || txLED1 == nullptr))
+    {
+        if (forceClear) txLED0->clear();
+        else txLED0->toggle();
     }
+    else if (whichBus == 1 && txLED1 != nullptr)
+    {
+        if (forceClear) txLED1->clear();
+        else txLED1->toggle();
+    }
+}
+
+void sys_io_doLoop()
+{
+    if (rxLED0) rxLED0->doLoop();
+    if (rxLED1) rxLED1->doLoop();
+    if (txLED0) txLED0->doLoop();
+    if (txLED1) txLED1->doLoop();
 }
