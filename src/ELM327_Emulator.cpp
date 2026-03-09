@@ -36,9 +36,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "utility.h"
 #include "esp32_can.h"
 #include "can_manager.h"
-#ifndef CONFIG_IDF_TARGET_ESP32S3
+#ifdef ELM327_USE_BLUETOOTH_SERIAL
 #include "BluetoothSerial.h"
 #endif
+
 
 /*
  * Constructor. Nothing at the moment
@@ -61,7 +62,8 @@ ELM327Emu::ELM327Emu()
  * Initialization of hardware and parameters
  */
 void ELM327Emu::setup() {
-#ifndef CONFIG_IDF_TARGET_ESP32S3
+
+#ifdef USE_BLUETOOTH_SERIAL
     serialBT.begin(settings.btName);
 #endif
 }
@@ -100,7 +102,7 @@ void ELM327Emu::loop() {
     int incoming;
     if (!mClient) //bluetooth
     {
-#ifndef CONFIG_IDF_TARGET_ESP32S3
+#ifdef ELM327_USE_BLUETOOTH_SERIAL
         while (serialBT.available()) {
             incoming = serialBT.read();
             if (incoming != -1) { //and there is no reason it should be -1
@@ -164,7 +166,7 @@ void ELM327Emu::sendTxBuffer()
     }
     else //bluetooth then
     {
-#ifndef CONFIG_IDF_TARGET_ESP32S3
+#ifdef ELM327_USE_BLUETOOTH_SERIAL
         serialBT.write(txBuffer.getBufferedBytes(), txBuffer.numAvailableBytes());
         //Serial.write(txBuffer.getBufferedBytes(), txBuffer.numAvailableBytes());
 #endif

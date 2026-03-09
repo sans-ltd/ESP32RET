@@ -50,10 +50,17 @@ AT RV (adapter voltage) - Send something like 14.4V
 #ifndef ELM327_H_
 #define ELM327_H_
 
+#include <sdkconfig.h>
+#ifndef CONFIG_IDF_TARGET_ESP32C6
+#ifndef CONFIG_IDF_TARGET_ESP32S3
+#define ELM327_USE_BLUETOOTH_SERIAL 
+#endif
+#endif
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include "commbuffer.h"
-#ifndef CONFIG_IDF_TARGET_ESP32S3
+#ifdef ELM327_USE_BLUETOOTH_SERIAL
 #include "BluetoothSerial.h"
 #endif
 
@@ -73,7 +80,7 @@ public:
     void setSendingBus(int bus) { sendingBus = bus; }
 
 private:
-#ifndef CONFIG_IDF_TARGET_ESP32S3
+#ifdef ELM327_USE_BLUETOOTH_SERIAL
     BluetoothSerial serialBT;
 #endif
     WiFiClient *mClient;
