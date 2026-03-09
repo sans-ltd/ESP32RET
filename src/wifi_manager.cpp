@@ -91,6 +91,11 @@ void WiFiManager::loop()
                     leds[SysSettings.LED_CONNECTION_STATUS] = CRGB::Green;
                     FastLED.show();
                 }
+#ifdef VIRTUALLED_EMULATE_FASTLED
+                virtualLEDs.getDisplay()->setCursor(0, 0);
+                virtualLEDs.getDisplay()->print(WiFi.localIP().toString().c_str());
+                virtualLEDs.getDisplay()->display();
+#endif
             }
             if (settings.wifiMode == 2)
             {
@@ -99,6 +104,12 @@ void WiFiManager::loop()
                 Serial.print("IP address: ");
                 Serial.println(WiFi.softAPIP());
                 needServerInit = true;
+
+#ifdef VIRTUALLED_EMULATE_FASTLED
+                virtualLEDs.getDisplay()->setCursor(0, 0);
+                virtualLEDs.getDisplay()->print(settings.SSID);
+                virtualLEDs.getDisplay()->display();
+#endif
             }
             if (needServerInit)
             {
@@ -197,6 +208,11 @@ void WiFiManager::loop()
                                 Serial.print("New wifi ELM client: ");
                                 Serial.print(i); Serial.print(' ');
                                 Serial.println(SysSettings.wifiOBDClients[i].remoteIP());
+                                if (SysSettings.fancyLED)
+                                {
+                                    leds[SysSettings.LED_CONNECTION_STATUS] = CRGB::Blue;
+                                    FastLED.show();
+                                }
                             }
                         }
                     }
