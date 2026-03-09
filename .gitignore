@@ -27,3 +27,8 @@
 *.exe
 *.out
 *.app
+
+.pio
+managed_components
+build
+sdkconfig.sans-tester
