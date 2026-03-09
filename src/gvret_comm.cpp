@@ -287,14 +287,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
                     settings.canSettings[0].enabled = false;
                 }
 
-                if (settings.canSettings[0].enabled)
-                {
-                    canBuses[0]->begin(settings.canSettings[0].nomSpeed, 255);
-                    if (settings.canSettings[0].listenOnly) canBuses[0]->setListenOnlyMode(true);
-                    else canBuses[0]->setListenOnlyMode(false);
-                    canBuses[0]->watchFor();
-                }
-                else canBuses[0]->disable();
+                canManager.updateCanBusSettings(0);
                 break;
             case 4:
                 build_int = in_byte;
@@ -339,14 +332,7 @@ void GVRET_Comm_Handler::processIncomingByte(uint8_t in_byte)
                     settings.canSettings[1].enabled = false;
                 }
 
-                if (settings.canSettings[1].enabled)
-                {
-                    canBuses[1]->begin(settings.canSettings[1].nomSpeed, 255);
-                    if (settings.canSettings[1].listenOnly) canBuses[1]->setListenOnlyMode(true);
-                    else canBuses[1]->setListenOnlyMode(false);
-                    canBuses[1]->watchFor();
-                }
-                else canBuses[1]->disable();
+                canManager.updateCanBusSettings(1);
 
                 state = IDLE;
                 //now, write out the new canbus settings to EEPROM

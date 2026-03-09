@@ -24,9 +24,12 @@ public:
     void loop();
     void setup();
     void setSendToConsole(bool state) { sendToConsole = state; }
+    void updateCanBusSettings(uint8_t numBus);
 
 private:
     BUSLOAD busLoad[NUM_BUSES];
     uint32_t busLoadTimer;
     bool sendToConsole;
+
+    void updateCanStatusDisplay(uint8_t bus);
 };

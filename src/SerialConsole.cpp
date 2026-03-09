@@ -220,13 +220,7 @@ void SerialConsole::handleConfigCmd()
         if (newValue > 1) newValue = 1;
         Logger::console("Setting CAN%i Enabled to %i", idx, newValue);
         settings.canSettings[idx].enabled = newValue;
-        if (newValue == 1) 
-        {
-            //CAN0.enable();
-            canBuses[idx]->begin(settings.canSettings[idx].nomSpeed, 255);
-            canBuses[idx]->watchFor();
-        }
-        else canBuses[idx]->disable();
+        canManager.updateCanBusSettings(idx);
         writeEEPROM = true;
     } else if (cmdString.startsWith("CANSPEED")) {
         int idx = cmdString[cmdString.length() - 1] - '0';
@@ -240,6 +234,8 @@ void SerialConsole::handleConfigCmd()
             {
                 if (settings.canSettings[idx].fdMode)
                     canBuses[idx]->begin(settings.canSettings[idx].nomSpeed, settings.canSettings[idx].fdSpeed);
+                else
+                    canManager.updateCanBusSettings(idx);
             }
             writeEEPROM = true;
         } 
@@ -284,11 +280,7 @@ void SerialConsole::handleConfigCmd()
         if (newValue >= 0 && newValue <= 1) {
             Logger::console("Setting CAN%i Listen Only to %i", idx, newValue);
             settings.canSettings[idx].listenOnly = newValue;
-            if (settings.canSettings[idx].listenOnly) {
-                canBuses[idx]->setListenOnlyMode(true);
-            } else {
-                canBuses[idx]->setListenOnlyMode(false);
-            }
+            canManager.updateCanBusSettings(idx);
             writeEEPROM = true;
         } else Logger::console("Invalid setting! Enter a value 0 - 1");
     } else if (cmdString == String("CAN0FILTER0")) { //someone should kick me in the face for this laziness... FIX THIS!

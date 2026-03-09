@@ -29,6 +29,10 @@
 //#define TWAI_ALERT_NONE                     0x00000000  /**< Bit mask to disable all alerts during configuration */
 //#define TWAI_ALERT_AND_LOG                  0x00020000  /**< Bit mask to enable alerts to also be logged when they occur. Note that logging from the ISR is disabled if CONFIG_TWAI_ISR_IN_IRAM is enabled (see docs). */
 
+#ifdef VIRTUALLED_EMULATE_FASTLED
+#include <VirtualLED.h>
+extern VirtualLEDs virtualLEDs;
+#endif
 
 CANManager::CANManager()
 {
@@ -80,6 +84,7 @@ void CANManager::setup()
         {
             canBuses[i]->disable();
         }
+        updateCanStatusDisplay(i);
     }
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3    
@@ -230,4 +235,50 @@ void CANManager::loop()
     }
 
     sys_io_doLoop();
+}
+
+void CANManager::updateCanBusSettings(uint8_t numBus)
+{
+    if (settings.canSettings[numBus].enabled)
+    {
+        canBuses[numBus]->begin(settings.canSettings[numBus].nomSpeed, 255);
+        if (settings.canSettings[numBus].listenOnly) canBuses[numBus]->setListenOnlyMode(true);
+        else canBuses[numBus]->setListenOnlyMode(false);
+        canBuses[numBus]->watchFor();
+    }
+    else canBuses[numBus]->disable();
+
+    updateCanStatusDisplay(numBus);
+}
+
+void CANManager::updateCanStatusDisplay(uint8_t bus)
+{
+#ifdef VIRTUALLED_EMULATE_FASTLED
+    auto display = virtualLEDs.getDisplay();
+
+    if (bus == 0)
+    {
+        display->fillRect(24+4, 12, 47+4, 31, SSD1306_BLACK);
+        if (settings.canSettings[bus].enabled)
+        {
+            display->setCursor(24+4,12);
+            display->println(F("CAN0"));
+            display->setCursor(24+4,20);
+            display->printf("%4d", settings.canSettings[bus].nomSpeed / 1000);
+        }
+        display->display();
+    }
+    else if (bus == 1)
+    {
+        display->fillRect(72+8, 12, 95+8, 31, SSD1306_BLACK);
+        if (settings.canSettings[bus].enabled)
+        {
+            display->setCursor(72+8,12);
+            display->println(F("CAN1"));
+            display->setCursor(72+8,20);
+            display->printf("%4d", settings.canSettings[bus].nomSpeed / 1000);
+        }
+        display->display();
+    }
+#endif
 }
