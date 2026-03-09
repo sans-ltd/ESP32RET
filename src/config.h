@@ -67,6 +67,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 //It's not even used on this hardware currently. But, slows down the blinks to make them more visible
 #define BLINK_SLOWNESS  100 
+//How long (in ms) should wait before we turn off the LED after receiving the last message
+#define BLINK_TIMEOUT 100
 
 #define A0_LED_PIN     2
 #define A0_NUM_LEDS    1
@@ -121,6 +123,8 @@ struct EEPROMSettings {
 struct SystemSettings {
     uint8_t LED_CANTX;
     uint8_t LED_CANRX;
+    uint8_t LED_CANTX1 = 0xff;
+    uint8_t LED_CANRX1 = 0xff;
     uint8_t LED_LOGGING;
     uint8_t LED_CONNECTION_STATUS;
     boolean fancyLED;
