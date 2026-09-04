@@ -32,6 +32,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <esp32_mcp2517fd.h>
 #include <Preferences.h>
 #include <VirtualLED.h>
+#include <VirtualCAN.h>
+#include <GPIO_CANPlugin.h>
 #include <IconStock.h>
 #include <FastLED.h>
 #include <IODefinitions.h>
@@ -76,6 +78,9 @@ LAWICELHandler lawicel;
 SerialConsole console;
 
 VirtualLEDs virtualLEDs;
+VirtualCAN virtualCAN;
+GPIO_CANPlugin gpioCANPlugin(CANBus::VIRTUAL_CAN);
+
 CRGB leds[A5_NUM_LEDS]; //A5 has the largest # of LEDs so use that one even for A0 or EVTV
 
 CAN_COMMON *canBuses[NUM_BUSES];
@@ -252,8 +257,10 @@ void loadSettings()
     if (settings.systemType == 4)
     {
         Logger::console("Running on SANS Tester");
+
         canBuses[0] = &CAN0;
         canBuses[1] = &CAN1;
+        canBuses[2] = &virtualCAN;
         SysSettings.LED_CONNECTION_STATUS = 0;
         SysSettings.LED_CANRX = 1;
         SysSettings.LED_CANTX = 2;
@@ -268,7 +275,7 @@ void loadSettings()
         SysSettings.lawicelMode = false;
         SysSettings.lawicellExtendedMode = false;
         SysSettings.lawicelTimestamping = false;
-        SysSettings.numBuses = 2; // We support both TWAI busses of ESP32-C6
+        SysSettings.numBuses = 3; // We support both TWAI busses of ESP32-C6 + the virtual CAN bus for GPIO control.
         SysSettings.isWifiActive = false;
         SysSettings.isWifiConnected = false;
         strcpy(deviceName, "SANS-Tester");
@@ -334,6 +341,13 @@ void loadSettings()
 
         display->setTextSize(1); 
         display->setTextColor(SSD1306_WHITE);
+
+        IODefinitions::addManualInitPin(IODefinitions::CAN_SLEEP);
+        IODefinitions::initGPIO();
+        virtualCAN.addPlugin(&gpioCANPlugin);
+        gpioCANPlugin.begin();
+        settings.canSettings[2].enabled = true;
+        settings.canSettings[2].fdMode = false;
     }
 
     if (nvPrefs.getString("SSID", settings.SSID, 32) == 0)
@@ -358,7 +372,7 @@ void loadSettings()
         sprintf(buff, "can%ispeed", i);
         settings.canSettings[i].nomSpeed = nvPrefs.getUInt(buff, 500000);
         sprintf(buff, "can%i_en", i);
-        settings.canSettings[i].enabled = nvPrefs.getBool(buff, (i < 2)?true:false);
+        settings.canSettings[i].enabled = nvPrefs.getBool(buff, (i < 2 || canBuses[2] == &virtualCAN)?true:false);
         sprintf(buff, "can%i-listenonly", i);
         settings.canSettings[i].listenOnly = nvPrefs.getBool(buff, false);
         sprintf(buff, "can%i-fdspeed", i);
@@ -370,6 +384,12 @@ void loadSettings()
     Serial.printf("CAN0 fdmode: %d, listenOnly: %d, CAN1 fdmode: %d, listenOnly: %d\n", 
                   settings.canSettings[0].fdMode, settings.canSettings[0].listenOnly,
                   settings.canSettings[1].fdMode, settings.canSettings[1].listenOnly);
+
+    if (SysSettings.numBuses >= 2)
+    {
+        Serial.printf("CAN2 fdmode: %d, listenOnly: %d enabled: %d\n", 
+                      settings.canSettings[2].fdMode, settings.canSettings[2].listenOnly, settings.canSettings[2].enabled);
+    }
     nvPrefs.end();
 
     Logger::setLoglevel((Logger::LogLevel)settings.logLevel);
@@ -509,4 +529,5 @@ void loop()
     }
 
     elmEmulator.loop();
+    gpioCANPlugin.doLoop();
 }
