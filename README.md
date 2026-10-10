@@ -1,3 +1,20 @@
+ESP32RET for SANS Tester
+========================
+
+Hardware
+--------
+This repository contains a fork of ESP32RET for the [SANS Tester](https://github.com/sans-ltd/hardware-doc#sans-gateway)
+
+Differences
+-----------
+Aside from the additional hardware support this repository has following changes:
+* Development is done with Platform-IO in VS Code
+* ESP-IDF 5 is needed for TWAI-V2 because this is needed for the second CAN bus on ESP32-C6
+* Library dependencies are integrated as git submodules
+   - After pulling the repo, run `git submodule update --init --recursive` to load all dependencies
+* To build the whole project, use PlatformIO's build functionality. Our environment is `sans-tester`
+
+
 ESP32RET
 =======
 
